@@ -47,7 +47,7 @@
                     <i class="fa-solid fa-bars"></i>
                 </button>
             </div>
-            <p class="text-xs text-blue-100"><i class="fa-solid fa-rotate-right mr-1"></i>データ更新: 2026/7/17 (共通教育棟)</p>
+            <p class="text-xs text-blue-100"><i class="fa-solid fa-rotate-right mr-1"></i>データ更新: <span id="updated-date">取得中...</span> (共通教育棟)</p>
         </header>
 
         <div class="bg-gray-50 border-b px-4 py-3 shadow-sm sticky top-[72px] z-10">
@@ -237,7 +237,17 @@
                 // Fetch external data file
                 const response = await fetch('data.json');
                 if (response.ok) {
-                    availabilityData = await response.json();
+                    const jsonData = await response.json();
+                    
+                    // 新フォーマット (updated_at と data が分かれている場合)
+                    if (jsonData.data && jsonData.updated_at) {
+                        availabilityData = jsonData.data;
+                        document.getElementById('updated-date').innerText = jsonData.updated_at;
+                    } else {
+                        // 旧フォーマット (直接データが入っている場合)
+                        availabilityData = jsonData;
+                        document.getElementById('updated-date').innerText = "不明";
+                    }
                     dataLoaded = true;
                 } else {
                     console.error("Failed to load data.json");
