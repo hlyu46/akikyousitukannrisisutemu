@@ -18,7 +18,6 @@
             -webkit-tap-highlight-color: transparent;
         }
         
-        /* Hide scrollbar for clean horizontal scrolling */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -28,68 +27,169 @@
         }
 
         .room-card {
-            transition: all 0.2s ease;
+            transition: transform 0.1s ease;
         }
         .room-card:active {
             transform: scale(0.96);
         }
+
+        /* 3D Button Style */
+        .btn-3d {
+            transition: all 0.1s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .btn-3d:active {
+            transform: translateY(4px);
+            border-bottom-width: 0px !important;
+            margin-top: 4px;
+            margin-bottom: -4px;
+        }
+
+        /* Slide Transition Classes */
+        .slide-enter {
+            transform: translateX(100%);
+        }
+        .slide-enter-active {
+            transform: translateX(0);
+            transition: transform 0.3s ease-out;
+        }
+        .slide-leave {
+            transform: translateX(0);
+        }
+        .slide-leave-active {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in;
+        }
     </style>
 </head>
-<body class="text-gray-800">
+<body class="text-gray-800 overflow-hidden h-screen">
 
-    <div class="max-w-md mx-auto bg-white min-h-screen relative shadow-2xl flex flex-col">
+    <div class="max-w-md mx-auto bg-white h-full relative shadow-2xl flex flex-col overflow-hidden">
         
-        <!-- App Header -->
-        <header class="bg-blue-600 text-white p-4 shadow-md z-10 sticky top-0">
-            <div class="flex justify-between items-center mb-1">
-                <h1 class="text-xl font-bold tracking-wide"><i class="fa-solid fa-school mr-2"></i>琉大 空き教室チェッカー</h1>
-                <button class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white" aria-label="Settings">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-            </div>
-            <p class="text-xs text-blue-100"><i class="fa-solid fa-rotate-right mr-1"></i>データ更新: <span id="updated-date">取得中...</span> (共通教育棟)</p>
-        </header>
+        <!-- ================= MAIN VIEW ================= -->
+        <div id="main-view" class="flex-col flex h-full absolute inset-0 bg-white z-10 transition-transform duration-300 transform translate-x-0">
+            <!-- App Header -->
+            <header class="bg-blue-600 text-white p-4 shadow-md z-20 shrink-0">
+                <div class="flex justify-between items-center mb-1">
+                    <h1 class="text-xl font-bold tracking-wide"><i class="fa-solid fa-school mr-2"></i>琉大 空き教室チェッカー</h1>
+                    <button class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white" aria-label="Settings">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                </div>
+                <p class="text-xs text-blue-100"><i class="fa-solid fa-rotate-right mr-1"></i>データ更新: <span id="updated-date">取得中...</span> (共通教育棟)</p>
+            </header>
 
-        <div class="bg-gray-50 border-b px-4 py-3 shadow-sm sticky top-[72px] z-10">
-            <!-- Day Selector -->
-            <p class="text-sm font-bold text-gray-500 mb-2">曜日を選択</p>
-            <div class="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1" id="day-selector">
-                <!-- JavaScript will populate this -->
+            <div class="bg-gray-50 border-b px-4 py-3 shadow-sm z-10 shrink-0">
+                <!-- Day Selector -->
+                <p class="text-sm font-bold text-gray-500 mb-2">曜日を選択</p>
+                <div class="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1" id="day-selector">
+                    <!-- JavaScript will populate this -->
+                </div>
+
+                <!-- Period Selector -->
+                <p class="text-sm font-bold text-gray-500 mb-2">時限を選択</p>
+                <div class="grid grid-cols-4 gap-2 mb-4" id="period-selector">
+                    <!-- JavaScript will populate this -->
+                </div>
+                
+                <!-- View Toggle -->
+                <div class="flex justify-center mt-2">
+                    <div class="bg-gray-200 p-1 rounded-lg inline-flex w-full">
+                        <button id="btn-view-list" class="flex-1 py-2 rounded-md text-sm font-bold bg-white text-blue-600 shadow-sm transition-colors" onclick="switchView('list')">
+                            <i class="fa-solid fa-list mr-1"></i> リスト
+                        </button>
+                        <button id="btn-view-map" class="flex-1 py-2 rounded-md text-sm font-bold text-gray-500 hover:text-gray-700 transition-colors" onclick="switchView('map')">
+                            <i class="fa-solid fa-map-location-dot mr-1"></i> マップ
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Period Selector -->
-            <p class="text-sm font-bold text-gray-500 mb-2">時限を選択</p>
-            <div class="grid grid-cols-4 gap-2" id="period-selector">
-                <!-- JavaScript will populate this -->
+            <!-- Content Area (Scrollable) -->
+            <div class="flex-grow p-4 bg-gray-100 overflow-y-auto relative" id="main-content">
+                
+                <div class="flex justify-between items-end mb-4">
+                    <h2 class="text-lg font-bold text-gray-800 border-l-4 border-blue-600 pl-2 leading-none" id="result-title">
+                        検索結果
+                    </h2>
+                    <span class="text-sm font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-md" id="room-count">0件</span>
+                </div>
+
+                <!-- Feature Legend -->
+                <div class="flex gap-3 mb-4 text-xs text-gray-600 bg-white p-2 rounded-lg shadow-sm border border-gray-200">
+                    <div class="flex items-center"><span class="text-blue-500 mr-1"><i class="fa-solid fa-snowflake"></i></span>優先エアコン</div>
+                    <div class="flex items-center"><span class="text-green-500 mr-1"><i class="fa-solid fa-plug"></i></span>コンセント有</div>
+                </div>
+
+                <!-- Views -->
+                <div id="view-list" class="space-y-4 pb-20 block">
+                    <!-- JavaScript will populate list -->
+                </div>
+                
+                <div id="view-map" class="pb-20 hidden">
+                    <p class="text-xs text-gray-500 mb-4 text-center">タップして階層・教室を確認できます</p>
+                    <div class="grid grid-cols-2 gap-4 px-2" id="map-buttons-container">
+                        <!-- JavaScript will populate map buttons -->
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="flex-grow p-4 bg-gray-100 overflow-y-auto" id="main-content">
-            
-            <div class="flex justify-between items-end mb-4">
-                <h2 class="text-lg font-bold text-gray-800 border-l-4 border-blue-600 pl-2 leading-none" id="result-title">
-                    検索結果
-                </h2>
-                <span class="text-sm font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-md" id="room-count">0件</span>
+        <!-- ================= BUILDING DETAIL VIEW ================= -->
+        <div id="building-detail-view" class="flex-col flex h-full absolute inset-0 bg-gray-50 z-20 transition-transform duration-300 transform translate-x-full">
+            <!-- Detail Header -->
+            <header class="bg-white border-b px-4 py-3 shadow-sm shrink-0 flex items-center">
+                <button onclick="hideBuildingDetail()" class="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600 mr-2 transition-colors">
+                    <i class="fa-solid fa-chevron-left text-lg"></i>
+                </button>
+                <div class="flex-grow">
+                    <h2 class="text-xl font-black text-gray-800 tracking-wide" id="detail-building-title">--号館</h2>
+                    <p class="text-xs text-blue-600 font-bold" id="detail-building-subtitle">空き教室: 0件</p>
+                </div>
+                <i class="fa-regular fa-building text-3xl text-gray-200"></i>
+            </header>
+
+            <!-- Floor Tabs -->
+            <div class="bg-white border-b px-2 py-2 shrink-0 flex gap-2 overflow-x-auto no-scrollbar" id="floor-tabs">
+                <!-- JavaScript will populate floor tabs -->
             </div>
 
-            <!-- Feature Legend -->
-            <div class="flex gap-3 mb-4 text-xs text-gray-600 bg-white p-2 rounded-lg shadow-sm border border-gray-200">
-                <div class="flex items-center"><span class="text-blue-500 mr-1"><i class="fa-solid fa-snowflake"></i></span>優先エアコン</div>
-                <div class="flex items-center"><span class="text-green-500 mr-1"><i class="fa-solid fa-plug"></i></span>コンセント有</div>
+            <!-- Detail Content (Scrollable) -->
+            <div class="flex-grow p-4 overflow-y-auto bg-gray-100" id="detail-content">
+                <div class="grid grid-cols-2 gap-3" id="detail-room-list">
+                    <!-- JavaScript will populate rooms -->
+                </div>
             </div>
+        </div>
 
-            <!-- Room List Container -->
-            <div id="room-list" class="space-y-4 pb-6">
-                <!-- JavaScript will populate rooms grouped by building -->
+    </div>
+
+    <!-- Modal for Room Info (kept simple for detail view if needed) -->
+    <div id="room-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl transform scale-95 transition-transform" id="room-modal-content">
+            <div class="bg-blue-600 p-4 flex justify-between items-center text-white">
+                <h3 class="text-xl font-bold" id="modal-room-name">教室名</h3>
+                <button onclick="closeModal()" class="text-white hover:bg-blue-700 p-1 rounded-full w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            
+            <div class="p-6">
+                <div class="flex items-center justify-center mb-4">
+                    <span id="modal-status-badge" class="px-4 py-1 rounded-full font-bold text-sm"></span>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <span class="text-gray-600"><i class="fa-solid fa-snowflake text-blue-500 w-5"></i> 優先エアコン</span>
+                        <span class="font-bold text-gray-800" id="modal-ac-status"></span>
+                    </div>
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <span class="text-gray-600"><i class="fa-solid fa-plug text-green-500 w-5"></i> コンセント</span>
+                        <span class="font-bold text-gray-800" id="modal-power-status"></span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        // --- Data Definitions based on the PDF provided ---
-        
         const days = ['月', '火', '水', '木', '金'];
         const periods = [
             { id: 1, name: '1限', time: '8:30~10:00' },
@@ -101,24 +201,172 @@
             { id: 7, name: '7限', time: '19:40~21:10' }
         ];
 
-        // Grouped by buildings based on the text
         const classrooms = {
             "1号館": ["1-118", "1-217"],
             "2号館": ["2-100", "2-101", "2-104", "2-200", "2-201", "2-205", "2-300", "2-301", "2-302", "2-305"],
             "3号館": ["3-101", "3-102", "3-103", "3-104", "3-201", "3-202", "3-203", "3-204", "3-205", "3-301", "3-302", "3-303", "3-304", "3-305"],
             "4号館": ["4-101", "4-103", "4-104"]
         };
+        
+        // Auto-generate building floors structure from classrooms array
+        const buildingLayouts = {};
+        for (const [building, rooms] of Object.entries(classrooms)) {
+            buildingLayouts[building] = { floors: {} };
+            rooms.forEach(room => {
+                // Determine floor from room number (e.g. "3-201" -> "2F")
+                const match = room.match(/-(\d)/);
+                const floorNum = match ? match[1] : "1";
+                const floorName = floorNum + "F";
+                if (!buildingLayouts[building].floors[floorName]) {
+                    buildingLayouts[building].floors[floorName] = [];
+                }
+                buildingLayouts[building].floors[floorName].push(room);
+            });
+            // Sort floors descending (3F, 2F, 1F)
+            const sortedFloors = {};
+            Object.keys(buildingLayouts[building].floors)
+                .sort((a, b) => b.localeCompare(a))
+                .forEach(key => {
+                    sortedFloors[key] = buildingLayouts[building].floors[key];
+                });
+            buildingLayouts[building].floors = sortedFloors;
+        }
 
-        // Specific room features extracted from the PDF text
         const priorityACRooms = ["2-100", "2-101", "2-200", "2-205", "2-300", "2-305", "3-104"];
         const powerOutletsRooms = ["2-200", "2-300"];
 
-        // State variables
         let selectedDay = '月';
-        let selectedPeriod = 3; // Default to 3rd period
-
+        let selectedPeriod = 3;
+        let currentView = 'list';
         let availabilityData = {};
         let dataLoaded = false;
+        
+        // Detail View State
+        let currentBuilding = null;
+        let currentFloor = null;
+
+        function switchView(view) {
+            currentView = view;
+            
+            const btnList = document.getElementById('btn-view-list');
+            const btnMap = document.getElementById('btn-view-map');
+            const viewList = document.getElementById('view-list');
+            const viewMap = document.getElementById('view-map');
+            
+            if (view === 'list') {
+                btnList.className = "flex-1 py-2 rounded-md text-sm font-bold bg-white text-blue-600 shadow-sm transition-colors";
+                btnMap.className = "flex-1 py-2 rounded-md text-sm font-bold text-gray-500 hover:text-gray-700 transition-colors";
+                viewList.classList.remove('hidden');
+                viewMap.classList.add('hidden');
+            } else {
+                btnMap.className = "flex-1 py-2 rounded-md text-sm font-bold bg-white text-blue-600 shadow-sm transition-colors";
+                btnList.className = "flex-1 py-2 rounded-md text-sm font-bold text-gray-500 hover:text-gray-700 transition-colors";
+                viewMap.classList.remove('hidden');
+                viewList.classList.add('hidden');
+            }
+            
+            renderResults();
+        }
+
+        function showBuildingDetail(building) {
+            currentBuilding = building;
+            const floors = Object.keys(buildingLayouts[building].floors);
+            currentFloor = floors.length > 0 ? floors[floors.length - 1] : null; // Default to lowest floor (1F)
+            
+            // Render detail header
+            document.getElementById('detail-building-title').innerText = building;
+            
+            // Slide in animation
+            const mainView = document.getElementById('main-view');
+            const detailView = document.getElementById('building-detail-view');
+            mainView.classList.add('-translate-x-full');
+            detailView.classList.remove('translate-x-full');
+            
+            renderBuildingDetail();
+        }
+
+        function hideBuildingDetail() {
+            const mainView = document.getElementById('main-view');
+            const detailView = document.getElementById('building-detail-view');
+            mainView.classList.remove('-translate-x-full');
+            detailView.classList.add('translate-x-full');
+            currentBuilding = null;
+        }
+        
+        function selectFloor(floor) {
+            currentFloor = floor;
+            renderBuildingDetail();
+        }
+
+        function renderBuildingDetail() {
+            if (!currentBuilding) return;
+            
+            const layout = buildingLayouts[currentBuilding];
+            
+            // Calculate total available for building
+            let buildingTotalAvailable = 0;
+            Object.values(layout.floors).forEach(rooms => {
+                rooms.forEach(room => {
+                    if (isRoomAvailable(selectedDay, selectedPeriod, room)) buildingTotalAvailable++;
+                });
+            });
+            document.getElementById('detail-building-subtitle').innerText = `空き教室: ${buildingTotalAvailable}件`;
+            
+            // Render Floor Tabs
+            const tabsContainer = document.getElementById('floor-tabs');
+            let tabsHtml = '';
+            Object.keys(layout.floors).forEach(floor => {
+                const isActive = floor === currentFloor;
+                tabsHtml += `
+                    <button onclick="selectFloor('${floor}')" 
+                        class="px-5 py-2 rounded-full font-bold text-sm transition-colors ${isActive ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}">
+                        ${floor}
+                    </button>
+                `;
+            });
+            tabsContainer.innerHTML = tabsHtml;
+            
+            // Render Rooms for Current Floor
+            const roomsContainer = document.getElementById('detail-room-list');
+            let roomsHtml = '';
+            
+            if (currentFloor && layout.floors[currentFloor]) {
+                layout.floors[currentFloor].forEach(room => {
+                    const isAvail = isRoomAvailable(selectedDay, selectedPeriod, room);
+                    const hasAC = priorityACRooms.includes(room);
+                    const hasPower = powerOutletsRooms.includes(room);
+                    
+                    if (isAvail) {
+                        roomsHtml += `
+                            <div onclick="showRoomModal('${room}')" class="room-card bg-white border border-gray-200 rounded-xl p-3 shadow-sm flex flex-col justify-between cursor-pointer border-l-4 border-l-blue-400 min-h-[90px]">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-xl font-black text-gray-800 tracking-tighter">${room}</span>
+                                    <div class="flex gap-1 text-xs">
+                                        ${hasAC ? '<span class="text-blue-500 bg-blue-50 w-6 h-6 rounded flex items-center justify-center" title="優先エアコン"><i class="fa-solid fa-snowflake"></i></span>' : ''}
+                                        ${hasPower ? '<span class="text-green-500 bg-green-50 w-6 h-6 rounded flex items-center justify-center" title="コンセント"><i class="fa-solid fa-plug"></i></span>' : ''}
+                                    </div>
+                                </div>
+                                <div class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded w-fit mt-auto">
+                                    空き
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        roomsHtml += `
+                            <div onclick="showRoomModal('${room}')" class="room-card bg-gray-50 border border-gray-200 rounded-xl p-3 flex flex-col justify-between cursor-pointer min-h-[90px] opacity-75">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-xl font-bold text-gray-400 tracking-tighter">${room}</span>
+                                </div>
+                                <div class="text-[10px] font-bold text-gray-400 bg-gray-200 px-2 py-1 rounded w-fit mt-auto">
+                                    使用中 / 不明
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+            }
+            roomsContainer.innerHTML = roomsHtml;
+        }
 
         function isRoomAvailable(day, period, room) {
             if (!dataLoaded) return false;
@@ -129,7 +377,6 @@
         }
 
         function renderSelectors() {
-            // Render Days
             const dayContainer = document.getElementById('day-selector');
             dayContainer.innerHTML = days.map(day => `
                 <button onclick="selectDay('${day}')" 
@@ -139,7 +386,6 @@
                 </button>
             `).join('');
 
-            // Render Periods
             const periodContainer = document.getElementById('period-selector');
             periodContainer.innerHTML = periods.map(p => `
                 <button onclick="selectPeriod(${p.id})" 
@@ -151,26 +397,66 @@
             `).join('');
         }
 
+        function showRoomModal(room) {
+            const isAvail = isRoomAvailable(selectedDay, selectedPeriod, room);
+            const hasAC = priorityACRooms.includes(room);
+            const hasPower = powerOutletsRooms.includes(room);
+            
+            document.getElementById('modal-room-name').innerText = room;
+            
+            const badge = document.getElementById('modal-status-badge');
+            if (isAvail) {
+                badge.innerText = '現在空いています';
+                badge.className = 'px-4 py-1 rounded-full font-bold text-sm bg-green-100 text-green-700 border border-green-300';
+            } else {
+                badge.innerText = '使用中（または不明）';
+                badge.className = 'px-4 py-1 rounded-full font-bold text-sm bg-gray-100 text-gray-600 border border-gray-300';
+            }
+            
+            document.getElementById('modal-ac-status').innerHTML = hasAC ? '<span class="text-blue-600">あり</span>' : '<span class="text-gray-400">なし</span>';
+            document.getElementById('modal-power-status').innerHTML = hasPower ? '<span class="text-green-600">あり</span>' : '<span class="text-gray-400">なし</span>';
+            
+            const modal = document.getElementById('room-modal');
+            const modalContent = document.getElementById('room-modal-content');
+            modal.classList.remove('hidden');
+            
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+            }, 10);
+        }
+        
+        function closeModal() {
+            const modal = document.getElementById('room-modal');
+            const modalContent = document.getElementById('room-modal-content');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
         function renderResults() {
-            const listContainer = document.getElementById('room-list');
             const titleEl = document.getElementById('result-title');
             const countEl = document.getElementById('room-count');
             
             titleEl.innerText = `${selectedDay}曜日 ${selectedPeriod}限 の空き教室`;
             
             let totalAvailable = 0;
-            let htmlContent = '';
+            const buildingAvailableCounts = {
+                "1号館": 0, "2号館": 0, "3号館": 0, "4号館": 0
+            };
 
-            // Iterate through buildings
+            // -------- Render List View --------
+            let listHtmlContent = '';
             for (const [building, rooms] of Object.entries(classrooms)) {
-                // Filter available rooms for this building
                 const availableRooms = rooms.filter(room => isRoomAvailable(selectedDay, selectedPeriod, room));
+                buildingAvailableCounts[building] = availableRooms.length;
                 
                 if (availableRooms.length > 0) {
                     totalAvailable += availableRooms.length;
                     
-                    // Render Building Header
-                    htmlContent += `
+                    listHtmlContent += `
                         <div class="mb-4">
                             <h3 class="text-sm font-bold text-gray-500 mb-2 flex items-center">
                                 <i class="fa-regular fa-building mr-1"></i> ${building}
@@ -178,13 +464,12 @@
                             <div class="grid grid-cols-2 gap-3">
                     `;
 
-                    // Render individual room cards
                     availableRooms.forEach(room => {
                         const hasAC = priorityACRooms.includes(room);
                         const hasPower = powerOutletsRooms.includes(room);
                         
-                        htmlContent += `
-                            <div class="room-card bg-white border border-gray-200 rounded-xl p-3 shadow-sm flex flex-col justify-between cursor-pointer border-l-4 border-l-blue-400">
+                        listHtmlContent += `
+                            <div onclick="showRoomModal('${room}')" class="room-card bg-white border border-gray-200 rounded-xl p-3 shadow-sm flex flex-col justify-between cursor-pointer border-l-4 border-l-blue-400">
                                 <div class="flex justify-between items-start mb-2">
                                     <span class="text-xl font-black text-gray-800 tracking-tighter">${room}</span>
                                     <div class="flex gap-1 text-sm">
@@ -199,12 +484,12 @@
                         `;
                     });
 
-                    htmlContent += `</div></div>`;
+                    listHtmlContent += `</div></div>`;
                 }
             }
 
             if (totalAvailable === 0) {
-                htmlContent = `
+                listHtmlContent = `
                     <div class="bg-white rounded-xl p-8 text-center shadow-sm border border-gray-200 mt-4">
                         <div class="text-gray-300 text-5xl mb-3"><i class="fa-regular fa-face-frown-open"></i></div>
                         <p class="font-bold text-gray-600">空き教室がありません</p>
@@ -212,9 +497,37 @@
                     </div>
                 `;
             }
-
-            listContainer.innerHTML = htmlContent;
+            document.getElementById('view-list').innerHTML = listHtmlContent;
             countEl.innerText = `${totalAvailable}件`;
+            
+            // -------- Render Map View (Buildings Only) --------
+            let mapHtmlContent = '';
+            for (const building of Object.keys(classrooms)) {
+                const availCount = buildingAvailableCounts[building];
+                const hasAvail = availCount > 0;
+                
+                const btnColor = hasAvail ? 'border-blue-500 bg-white' : 'border-gray-300 bg-gray-50';
+                const textColor = hasAvail ? 'text-gray-800' : 'text-gray-400';
+                const iconColor = hasAvail ? 'text-blue-500' : 'text-gray-300';
+                
+                mapHtmlContent += `
+                    <button onclick="showBuildingDetail('${building}')" class="btn-3d relative ${btnColor} border-2 border-b-[6px] rounded-2xl p-6 flex flex-col items-center justify-center min-h-[120px]">
+                        <i class="fa-solid fa-building ${iconColor} text-5xl mb-3"></i>
+                        <span class="font-black text-lg tracking-wide ${textColor}">${building}</span>
+                        ${hasAvail ? `
+                            <div class="absolute -top-3 -right-2 bg-green-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-md border-2 border-white animate-bounce-slow">
+                                空き: ${availCount}
+                            </div>
+                        ` : ''}
+                    </button>
+                `;
+            }
+            document.getElementById('map-buttons-container').innerHTML = mapHtmlContent;
+            
+            // If detail view is open, refresh it too
+            if (currentBuilding) {
+                renderBuildingDetail();
+            }
         }
 
         function selectDay(day) {
@@ -229,36 +542,45 @@
             renderResults();
         }
 
-        // Initialization on page load
         window.onload = async () => {
             renderSelectors();
             
             try {
-                // Fetch external data file
                 const response = await fetch('data.json');
                 if (response.ok) {
                     const jsonData = await response.json();
-                    
-                    // 新フォーマット (updated_at と data が分かれている場合)
                     if (jsonData.data && jsonData.updated_at) {
                         availabilityData = jsonData.data;
                         document.getElementById('updated-date').innerText = jsonData.updated_at;
                     } else {
-                        // 旧フォーマット (直接データが入っている場合)
                         availabilityData = jsonData;
                         document.getElementById('updated-date').innerText = "不明";
                     }
                     dataLoaded = true;
-                } else {
-                    console.error("Failed to load data.json");
                 }
             } catch (err) {
                 console.error("Error fetching data:", err);
             }
             
             renderResults();
+            
+            // Add custom bounce animation for badges
+            const style = document.createElement('style');
+            style.innerHTML = `
+                @keyframes bounce-slow {
+                    0%, 100% { transform: translateY(-5%); }
+                    50% { transform: translateY(5%); }
+                }
+                .animate-bounce-slow {
+                    animation: bounce-slow 3s infinite ease-in-out;
+                }
+            `;
+            document.head.appendChild(style);
         };
-
+        
+        document.getElementById('room-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
     </script>
 </body>
 </html>
